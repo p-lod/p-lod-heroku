@@ -5,6 +5,8 @@ folium
 gunicorn
 markdown
 rdflib
+rdflib-sqlalchemy
+SQLAlchemy
 #whitenoise==2.0.6
 Jinja2
 Werkzeug

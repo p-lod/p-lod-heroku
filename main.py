@@ -20,8 +20,11 @@ from flask import request
 from flask import redirect, url_for, after_this_request
 
 import markdown
+import os
 
-import rdflib
+import rdflib as rdf
+from rdflib_sqlalchemy import registerplugins
+
 
 ns = {"dcterms" : "http://purl.org/dc/terms/",
       "owl"     : "http://www.w3.org/2002/07/owl#",
@@ -34,10 +37,19 @@ ns = {"dcterms" : "http://purl.org/dc/terms/",
 app = Flask(__name__)
 
 
-g = rdflib.Graph()
+registerplugins()
+store = rdf.plugin.get("SQLAlchemy", rdf.store.Store)(identifier="p-lod-store")
+g = rdf.Graph(store, identifier="p-lod-graph")
+g.open(rdf.Literal("sqlite:///%(here)s/p-lod-triplestore.sqlite" % {"here": os.getcwd()}),
+       create = True)
 
 
-result = g.parse("google-lod-triples.ttl", format="turtle")
+# g = rdflib.Graph()
+
+
+#result = g.parse("google-lod-triples.ttl", format="turtle")
+#result = g.parse("google-spaces-and-features.ttl", format="turtle")
+#result = g.parse("google-artwork-triples.ttl", format="turtle")
 
 def plodheader(doc, plod = ''):
     
