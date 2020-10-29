@@ -4,6 +4,7 @@ Flask
 folium
 gunicorn
 markdown
+pandas
 rdflib
 rdflib-sqlalchemy
 SQLAlchemy

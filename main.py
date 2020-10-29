@@ -5,12 +5,11 @@ pyhtml = html
 
 import os
 import re
-#import urllib.parse
-#import urllib.request
+
+import pandas as pd
 
 import dominate
 from dominate.tags import *
-
 
 from bs4 import BeautifulSoup
 
@@ -20,7 +19,6 @@ from flask import request
 from flask import redirect, url_for, after_this_request
 
 import markdown
-import os
 
 import rdflib as rdf
 from rdflib.plugins.stores import sparqlstore
@@ -271,12 +269,12 @@ def vocabulary(vocab):
         with nav(cls="navbar navbar-default navbar-fixed-top"):
            with div(cls="container-fluid"):
                with div(cls="navbar-header"):
-                   a("P-LOD Linked Open Data for Pompeii: Vocabulary", href="/p-lod/entities/pompeii",cls="navbar-brand")
+                   a("P-LOD Linked Open Data for Pompeii: Vocabulary", href="/p-lod/id/pompeii",cls="navbar-brand")
                    with ul(cls="nav navbar-nav"):
                        with li(cls="dropdown"):
                            a("Browse", href="#",cls="dropdown-toggle", data_toggle="dropdown")
                            with ul(cls="dropdown-menu", role="menu"):
-                               li(a('Go to Pompeii', href="/p-lod/entities/pompeii"))
+                               li(a('Go to Pompeii', href="/p-lod/id/pompeii"))
 
         with div(cls="container"):
             with dl(cls="dl-horizontal"):
