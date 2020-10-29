@@ -23,33 +23,23 @@ import markdown
 import os
 
 import rdflib as rdf
-from rdflib_sqlalchemy import registerplugins
+from rdflib.plugins.stores import sparqlstore
 
 
 ns = {"dcterms" : "http://purl.org/dc/terms/",
       "owl"     : "http://www.w3.org/2002/07/owl#",
       "rdf"     : "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
       "rdfs"    : "http://www.w3.org/2000/01/rdf-schema#" ,
-      "p-lod"   : "http://p-lod.umasscreate.net/vocabulary#",
-      "p-lod-v" : "http://digitalhumanities.umass.edu/p-lod/vocabulary/",
-      "p-lod-e" : "http://digitalhumanities.umass.edu/p-lod/entities/" }
+      "p-lod"   : "http://p-lod.umasscreate.net/vocabulary#" }
 
 app = Flask(__name__)
 
 
-registerplugins()
-store = rdf.plugin.get("SQLAlchemy", rdf.store.Store)(identifier="p-lod-store")
-g = rdf.Graph(store, identifier="p-lod-graph")
-g.open(rdf.Literal("sqlite:///%(here)s/p-lod-triplestore.sqlite" % {"here": os.getcwd()}),
-       create = True)
+# Connect to the remote triplestore with read-only connection
+store = rdf.plugin.get("SPARQLStore", rdf.store.Store)(endpoint="http://52.170.134.25:3030/plod_endpoint/query",
+                                                       context_aware = False)
+g = rdf.Graph(store)
 
-
-# g = rdflib.Graph()
-
-
-#result = g.parse("google-lod-triples.ttl", format="turtle")
-#result = g.parse("google-spaces-and-features.ttl", format="turtle")
-#result = g.parse("google-artwork-triples.ttl", format="turtle")
 
 def plodheader(doc, plod = ''):
     
@@ -65,8 +55,8 @@ def plodheader(doc, plod = ''):
     doc.head += meta(name="DC.title",lang="en",content="%s" % (plod) )
     doc.head += meta(name="DC.identifier", content="http://digitalhumanities.umass.edu/p-lod/%s" % plod)
 
-@app.route('/p-lod/entities/<path:entity>')
-def entities(entity):
+@app.route('/p-lod/id/<path:identifier>')
+def identifiers(identifier):
     # @after_this_request
     # def add_header(response):
     #    response.headers['Content-Type'] = 'application/xhtml+xml; charset=utf-8'
@@ -80,13 +70,13 @@ def entities(entity):
               OPTIONAL { ?p rdfs:range ?prange }
               OPTIONAL { ?p p-lod:sort-order ?sortorder }
               OPTIONAL { ?o rdfs:label ?olabel }
-           } ORDER BY ?sortorder ?plabel""" % (entity), initNs = ns)
+           } ORDER BY ?sortorder ?plabel""" % (identifier), initNs = ns)
 
     elabel = g.query(
         """SELECT ?slabel 
            WHERE {
               p-lod:%s dcterms:title ?slabel
-           }""" % (entity), initNs = ns)
+           }""" % (identifier), initNs = ns)
            
     eparts = g.query(
         """SELECT ?part ?label ?vfile ?sortorder
@@ -97,44 +87,42 @@ def entities(entity):
               ?part rdf:type ?type .
               OPTIONAL { ?part p-lod:visual-documentation-file ?vfile }
               OPTIONAL { ?part p-lod:sort-order ?sortorder }
-           } ORDER BY ?type ?sortorder ?part""" % (entity), initNs = ns)
+           } ORDER BY ?type ?sortorder ?part""" % (identifier), initNs = ns)
            
     esameas = g.query(
         """SELECT ?url ?label
            WHERE {
-              ?url owl:sameAs p-lod-e:%s .
+              ?url owl:sameAs p-lod:%s .
               ?url rdfs:label ?label .
-           }""" % (entity), initNs = ns)
+           }""" % (identifier), initNs = ns)
            
     eobjects = g.query(
         """SELECT ?s ?p ?slabel ?plabel 
            WHERE {
-              ?s  ?p p-lod-e:%s .
+              ?s  ?p p-lod:%s .
               OPTIONAL { ?s rdfs:label ?slabel }
               OPTIONAL { ?p rdfs:label ?plabel }
               FILTER ( ?p != p-lod:next )
               FILTER ( ?p != p-lod:is-part-of )
               FILTER ( ?p != owl:sameAs )
-           }  ORDER BY ?s LIMIT 1000""" % (entity), initNs = ns)
+           }  ORDER BY ?s LIMIT 1000""" % (identifier), initNs = ns)
 
-    edoc = dominate.document(title="Linked Open Data for Pompeii: %s" % (entity))
-    plodheader(edoc, entity)
+    edoc = dominate.document(title="Linked Open Data for Pompeii: %s" % (identifier))
+    plodheader(edoc, identifier)
     
     edoc.body['prefix'] = "bibo: http://purl.org/ontology/bibo/  cc: http://creativecommons.org/ns#  dcmitype: http://purl.org/dc/dcmitype/  dcterms: http://purl.org/dc/terms/  foaf: http://xmlns.com/foaf/0.1/  nm: http://nomisma.org/id/  owl:  http://www.w3.org/2002/07/owl#  rdfs: http://www.w3.org/2000/01/rdf-schema#   rdfa: http://www.w3.org/ns/rdfa#  rdf:  http://www.w3.org/1999/02/22-rdf-syntax-ns#  skos: http://www.w3.org/2004/02/skos/core#"
     with edoc:
         with nav(cls="navbar navbar-default navbar-fixed-top"):
            with div(cls="container-fluid"):
                with div(cls="navbar-header"):
-                   a("P-LOD Linked Open Data for Pompeii: Entity", href="/p-lod/entities/pompeii",cls="navbar-brand")
+                   a("P-LOD Linked Open Data for Pompeii: Identifier", href="/p-lod/entities/pompeii",cls="navbar-brand")
                    with ul(cls="nav navbar-nav"):
                        with li(cls="dropdown"):
                            a("Browse", href="#",cls="dropdown-toggle", data_toggle="dropdown")
                            with ul(cls="dropdown-menu", role="menu"):
-                               li(a('Go to Pompeii', href="/p-lod/entities/pompeii"))
-                               li(a('All Classes', href="/p-lod/vocabulary/entity"))
-                               li(a('All Properties', href="/p-lod/vocabulary/vocabulary-item"))
+                               li(a('Go to Pompeii', href="/p-lod/id/pompeii"))
     
-        with div(cls="container", about="/p-lod/%s" % (entity)):
+        with div(cls="container", about="/p-lod/%s" % (identifier)):
         
             with dl(cls="dl-horizontal"):
                 unescapehtml = False
@@ -204,7 +192,7 @@ def entities(entity):
                                 a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(part.part).replace('http://p-lod.umasscreate.net/vocabulary#',''))
                 
                 objlength = len(eobjects)
-                if objlength > 0:
+                if False: # objlength > 0:
                     lenstr = ''
                     if objlength == 1000:
                         lenstr = '(first 1000)'
@@ -223,7 +211,7 @@ def entities(entity):
                     span("P-LOD/PALP is under construction.")
                     a(" Github", href = "https://github.com/p-lod/p-lod")
                     # span(". Parse ")
-                    # a('RDFa', href="http://www.w3.org/2012/pyRdfa/extract?uri=http://p-lod.herokuapp.com/p-lod/entities/%s" % (entity))
+                    # a('RDFa', href="http://www.w3.org/2012/pyRdfa/extract?uri=http://p-lod.herokuapp.com/p-lod/entities/%s" % (identifier))
                     # span(".")
                     
     if unescapehtml == True:
@@ -289,8 +277,6 @@ def vocabulary(vocab):
                            a("Browse", href="#",cls="dropdown-toggle", data_toggle="dropdown")
                            with ul(cls="dropdown-menu", role="menu"):
                                li(a('Go to Pompeii', href="/p-lod/entities/pompeii"))
-                               li(a('All Classes', href="/p-lod/vocabulary/entity"))
-                               li(a('All Properties', href="/p-lod/vocabulary/vocabulary-item"))
 
         with div(cls="container"):
             with dl(cls="dl-horizontal"):
@@ -369,25 +355,9 @@ def vocabulary(vocab):
                  
     return vdoc.render()
 
-@app.route('/api/geojson/<path:entity>')
-def geojson_entity(entity):
-        geojsonr = g.query(
-        """SELECT ?lat ?long ?geojson
-           WHERE {
-              OPTIONAL { p-lod-e:%s p-lod-v:latitude ?lat ;
-                                    p-lod-v:longitude ?long .
-                         }
-              OPTIONAL { p-lod-e:%s p-lod-v:geojson ?geojson }
-           }""" % (entity, entity), initNs = ns)
-        
-        if len(geojsonr) > 0:
-            for row in geojsonr:
-                pass
-                    
-
 @app.route('/')
 def index():
-    return redirect("/p-lod/entities/pompeii", code=302)
+    return redirect("/p-lod/id/pompeii", code=302)
     
 
     
