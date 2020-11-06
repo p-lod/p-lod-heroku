@@ -211,7 +211,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                         dd(str(row.url))
 
       
-                if len(eparts) > 0:
+                if False: #len(eparts) > 0:
                     dt('Has parts')
                     with dd():
                         first = 0
@@ -227,8 +227,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                 else:
                                     pstyle = 'border-top: thin dotted #aaa;width:25%'
 
-                                p(a(label, rel="dcterms:hasPart", href = str(part.part).replace('urn:p-lod:id:','')), style=pstyle)
-                            
+                                p(a(label, rel="dcterms:hasPart", href = str(part.part).replace('urn:p-lod:id:','')), style=pstyle)  
 
                             if str(part.vfile) != "None":
                                 thumb = str(part.vfile)
@@ -251,11 +250,20 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                     pstyle = 'border-top: thin dotted #aaa;width:25%'
 
                                 p(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')), style=pstyle)
-                            
+                 
 
-                            if str(part.vfile) != "None":
-                                thumb = str(part.vfile)
-                                a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(part.part).replace('urn:p-lod:id:',''))
+                objlength = len(eobjects)
+                if objlength: # objlength > 0:
+                    lenstr = ''
+                    if objlength == 1000:
+                        lenstr = '(first 1000)'
+                    dt("Object of %s" % (lenstr))
+                    with dd():
+                         for s_p in eobjects:
+                            a(str(s_p.s), href= str(s_p.s).replace('urn:p-lod:id:',''))
+                            span(" via ")
+                            span(str(s_p.p))
+                            br()
 
                 if len(ehasart) > 0:
                     dt('Artwork within (30)')
@@ -276,27 +284,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                     pstyle = 'border-top: thin dotted #aaa;width:25%'
 
                                 p(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')), style=pstyle)
-                            
-
-                            if str(part.vfile) != "None":
-                                thumb = str(part.vfile)
-                                a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(part.part).replace('urn:p-lod:id:',''))
-
-
-
-                
-                objlength = len(eobjects)
-                if objlength: # objlength > 0:
-                    lenstr = ''
-                    if objlength == 1000:
-                        lenstr = '(first 1000)'
-                    dt("Property of %s" % (lenstr))
-                    with dd():
-                         for s_p in eobjects:
-                            a(str(s_p.s), href= str(s_p.s).replace('urn:p-lod:id:',''))
-                            span(" via ")
-                            span(str(s_p.p))
-                            br()
+                          
 
                 
         with footer(cls="footer"):
