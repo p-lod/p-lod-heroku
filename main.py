@@ -153,8 +153,6 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
     
     edoc.body['prefix'] = "bibo: http://purl.org/ontology/bibo/  cc: http://creativecommons.org/ns#  dcmitype: http://purl.org/dc/dcmitype/  dcterms: http://purl.org/dc/terms/  foaf: http://xmlns.com/foaf/0.1/  nm: http://nomisma.org/id/  owl:  http://www.w3.org/2002/07/owl#  rdfs: http://www.w3.org/2000/01/rdf-schema#   rdfa: http://www.w3.org/ns/rdfa#  rdf:  http://www.w3.org/1999/02/22-rdf-syntax-ns#  skos: http://www.w3.org/2004/02/skos/core#"
     with edoc:
-        #comment("HEREHERE")
-        #comment(eresult_df.loc[rdf.URIRef('http://purl.org/dc/terms/title'),'o'])
         with nav(cls="navbar navbar-default navbar-fixed-top"):
            with div(cls="container-fluid"):
                with div(cls="navbar-header"):
@@ -178,7 +176,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                     c_title = identifier
 
 
-                dd(strong(f"{c_title} [urn:p-lod:id:{identifier}]", cls="large"))
+                dd(strong(f"{c_title} [urn:p-lod:id:{identifier}]", cls="large"), style="margin-top:.5em;margin-bottom:.5em")
                 
 
                 for row in eresult:
@@ -225,7 +223,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                     first = 0
                                     pstyle = ''
                                 else:
-                                    pstyle = 'border-top: thin dotted #aaa;width:25%'
+                                    pstyle = ''
 
                                 p(a(label, rel="dcterms:hasPart", href = str(part.part).replace('urn:p-lod:id:','')), style=pstyle)  
 
@@ -233,8 +231,9 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                 thumb = str(part.vfile)
                                 a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(part.part).replace('urn:p-lod:id:',''))
 
-                if len(espatialancestors) > 0:
-                    dt('Spatial Ancestors')
+            if len(espatialancestors) > 0:
+                with dl(cls="dl-horizontal"):
+                    dt('Spatial Ancestors', style="")
                     with dd():
                         first = 0
                         curlabel = ''
@@ -247,17 +246,19 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                     first = 0
                                     pstyle = ''
                                 else:
-                                    pstyle = 'border-top: thin dotted #aaa;width:25%'
+                                    pstyle = ''
 
-                                p(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')), style=pstyle)
+                                span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')), style=pstyle)
+                                br()
                  
 
-                objlength = len(eobjects)
-                if objlength: # objlength > 0:
+            objlength = len(eobjects)
+            if objlength: # objlength > 0:
+                with dl(cls="dl-horizontal"):
                     lenstr = ''
                     if objlength == 1000:
                         lenstr = '(first 1000)'
-                    dt("Object of %s" % (lenstr))
+                    dt(f"Used as Object By  {lenstr}")
                     with dd():
                          for s_p in eobjects:
                             a(str(s_p.s), href= str(s_p.s).replace('urn:p-lod:id:',''))
@@ -265,8 +266,9 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                             span(str(s_p.p))
                             br()
 
-                if len(ehasart) > 0:
-                    dt('Artwork within (30)')
+            if len(ehasart) > 0:
+                with dl(cls="dl-horizontal"):
+                    dt('Artwork within (first 30)')
 
                     with dd():
                         first = 0
@@ -281,9 +283,10 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                                     first = 0
                                     pstyle = ''
                                 else:
-                                    pstyle = 'border-top: thin dotted #aaa;width:25%'
+                                    pstyle = ''
 
-                                p(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')), style=pstyle)
+                                span(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')), style=pstyle)
+                                br()
                           
 
                 
