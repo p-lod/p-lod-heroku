@@ -170,10 +170,10 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                 #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in eresult_df.index:
                 #    c_title = eresult_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
                 #else:
-                c_title = identifier
+                # c_title = identifier
 
 
-                dd(strong(f"{c_title} [urn:p-lod:id:{identifier}]", cls="large"), style="margin-top:.5em;margin-bottom:.5em")
+                dd(strong(identifier, cls="large"), style="margin-top:.5em;margin-bottom:.5em")
                 
 
                 for row in eresult:
@@ -196,59 +196,16 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                             a(row.o, title = str(row.o),href = str(row.o).replace('urn:p-lod:id:',''))
                         else:
                             span(olabel)  
-                                
-                        
-                
-        
-                if len(esameas) > 0:
-                    for row in esameas:
-                        dt("Alternate identifier")
-                        dd(str(row.url))
-
-      
-                if False: #len(eparts) > 0:
-                    dt('Has parts')
-                    with dd():
-                        first = 0
-                        curlabel = ''
-                        for part in eparts:
-                            label = str(part.part)
-                            if curlabel != label:
-                                curlabel = label
-                                
-                                if first == 1:
-                                    first = 0
-                                    pstyle = ''
-                                else:
-                                    pstyle = ''
-
-                                p(a(label, rel="dcterms:hasPart", href = str(part.part).replace('urn:p-lod:id:','')), style=pstyle)  
-
-                            if str(part.vfile) != "None":
-                                thumb = str(part.vfile)
-                                a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(part.part).replace('urn:p-lod:id:',''))
-
+    
             if len(espatialancestors) > 0:
                 with dl(cls="dl-horizontal"):
                     dt('Spatial Ancestors', style="")
                     with dd():
-                        first = 0
-                        curlabel = ''
                         for ancestor in espatialancestors:
                             label = str(ancestor.spatial_item)
-                            if curlabel != label:
-                                curlabel = label
-                                
-                                if first == 1:
-                                    first = 0
-                                    pstyle = ''
-                                else:
-                                    pstyle = ''
-
-                                span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')), style=pstyle)
-                                br()
+                            span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')))
+                            br()
                  
-
             objlength = len(eobjects)
             if objlength: # objlength > 0:
                 with dl(cls="dl-horizontal"):
@@ -268,23 +225,10 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                     dt('Artwork within (first 30)')
 
                     with dd():
-                        first = 0
-                        curlabel = ''
                         for art in ehasart:
                             label = str(art.depiction)
-                            within = str(art.within)
-                            if curlabel != label:
-                                curlabel = label
-                                
-                                if first == 1:
-                                    first = 0
-                                    pstyle = ''
-                                else:
-                                    pstyle = ''
-
-                                span(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')), style=pstyle)
-                                br()
-                          
+                            span(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')))
+                            br()
 
                 
         with footer(cls="footer"):
@@ -302,136 +246,6 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
     else:
         return edoc.render()
 
-                
-@app.route('/p-lod/vocabulary/<path:vocab>')
-def vocabulary(vocab):
-    vresult = g.query(
-        """SELECT ?p ?o ?plabel ?olabel
-           WHERE {
-              p-lod-v:%s ?p ?o .
-              OPTIONAL { ?p rdfs:label ?plabel }
-              OPTIONAL { ?o rdfs:label ?olabel }
-           } ORDER BY ?plabel""" % (vocab), initNs = ns)
-
-    vlabel = g.query(
-        """SELECT ?slabel 
-           WHERE {
-              p-lod-v:%s rdfs:label ?slabel
-           }""" % (vocab), initNs = ns)
-           
-    vinstances = g.query(
-        """SELECT ?instance ?label ?vfile
-           WHERE {
-              ?instance rdf:type p-lod-v:%s .
-              ?instance rdfs:label ?label .
-              OPTIONAL { ?instance p-lod-v:visual-documentation-file ?vfile }
-           } ORDER BY ?instance""" % (vocab), initNs = ns)
-           
-    vsubs = g.query(
-        """SELECT ?sub ?label
-           WHERE {
-              ?sub rdfs:subClassOf|rdfs:subPropertyOf p-lod-v:%s .
-              ?sub rdfs:label ?label .
-           } ORDER BY ?label""" % (vocab), initNs = ns)
-    
-    vusage = g.query(
-        """SELECT ?s ?o ?slabel ?olabel
-           WHERE {
-              ?s p-lod-v:%s ?o .
-              OPTIONAL { ?s rdfs:label ?slabel }
-              OPTIONAL { ?o rdfs:label ?olabel }
-           } ORDER BY ?s ?o LIMIT 2000""" % (vocab), initNs = ns)    
-
-    vdoc = dominate.document(title="Pompeii LOD: %s" % (vocab))
-    plodheader(vdoc, vocab)
-
-    with vdoc:
-
-        with nav(cls="navbar navbar-default navbar-fixed-top"):
-           with div(cls="container-fluid"):
-               with div(cls="navbar-header"):
-                   a("P-LOD Linked Open Data for Pompeii: Vocabulary", href="/p-lod/id/pompeii",cls="navbar-brand")
-                   with ul(cls="nav navbar-nav"):
-                       with li(cls="dropdown"):
-                           a("Browse", href="#",cls="dropdown-toggle", data_toggle="dropdown")
-                           with ul(cls="dropdown-menu", role="menu"):
-                               li(a('Go to Pompeii', href="/p-lod/id/pompeii"))
-
-        with div(cls="container"):
-            with dl(cls="dl-horizontal"):
-                dt()
-                for row in vlabel:
-                    dd(strong(str(row.slabel), cls="large"))
-
-                for row in vresult:
-                    if str(row.p) == 'http://www.w3.org/2000/01/rdf-schema#label':
-                        continue
-                    elif str(row.plabel) != 'None':
-                        dt(str(row.plabel)+":")
-                    else:
-                        dt(i(str(row.p)), style = "margin-left:.25em")
-                
-                    with dd():
-                        if str(row.olabel) != "None":
-                            olabel = str(row.olabel)
-                        else:
-                            olabel = str(row.o)
-                
-                        if str(row.o)[0:4] == 'http':
-                            a(olabel,href = str(row.o).replace('http://digitalhumanities.umass.edu',''))
-                        else:
-                            span(olabel)
-        
-                if len(vinstances) > 0:
-                    dt('Entities')
-                    with dd():
-                        first = 0
-                        curlabel = ''
-
-                        for instance in vinstances:
-                            label = str(instance.label)
-                            if curlabel != label:
-                                curlabel = label
-                                
-                                if first == 1:
-                                    first = 0
-                                    pstyle = ''
-                                else:
-                                    pstyle = 'border-top: thin dotted #aaa;width:25%'
-
-                                p(a(label, href = str(instance.instance).replace('http://digitalhumanities.umass.edu','')),style = pstyle)
-
-                            if str(instance.vfile) != "None":
-                                thumb = str(instance.vfile)
-                                a(img(style="margin-left:1em;margin-bottom:15px;max-width:150px;max-height:150px",src=thumb),href=str(instance.instance).replace('http://digitalhumanities.umass.edu',''))
-
-        
-                if len(vsubs) > 0:
-                    dt('Hierarchy')
-                    with dd():
-                        for sub in vsubs:
-                            p(a(str(sub.label), href = str(sub.sub).replace('http://digitalhumanities.umass.edu','')))
-                            
-                if len(vusage) > 0:
-                    dt('Used by')
-                    with dd():
-                        for use in vusage:
-                            with p():
-                                a(str(use.slabel), href = str(use.s).replace('http://digitalhumanities.umass.edu',''))
-                                span(" ⇒ ", style="color:gray")
-                                if str(use.olabel) != 'None':
-                                    label = str(use.olabel)
-                                else:
-                                    label = str(use.o).replace('http://digitalhumanities.umass.edu','')
-                                a(str(label), href = str(use.o).replace('http://digitalhumanities.umass.edu',''))
-                            
-
-            hr()
-            with p():
-                span("Work on the Pompeii Linked Open Data (P-LOD) browser is currently undertaken as part of the Getty funded Pompeii Artistic Landscape Project. PALP is co-directed by Eric Poehler and Sebastian Heath.")
- 
-                 
-    return vdoc.render()
 
 @app.route('/')
 def index():
