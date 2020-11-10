@@ -73,7 +73,7 @@ def identifiers(identifier):
               OPTIONAL { ?o rdfs:label ?olabel }
            } ORDER BY ?sortorder ?plabel""" % (identifier), initNs = ns)
     eresult_df = pd.DataFrame(eresult, columns = eresult.json['head']['vars']).set_index('p')
-           
+    
     eparts = g.query(
         """SELECT ?part ?label ?vfile ?sortorder
            WHERE {
@@ -86,16 +86,14 @@ def identifiers(identifier):
            } ORDER BY ?type ?sortorder ?part""" % (identifier), initNs = ns)
         
 
-
-    
     qt = Template("""
 PREFIX plod: <urn:p-lod:id:>
 PREFIX dcterms: <http://purl.org/dc/terms/>
 SELECT ?title ?spatial_item WHERE { 
-  plod:$resource plod:spatially-within+ ?spatial_item  .
+  plod:$identifier plod:spatially-within+ ?spatial_item  .
   OPTIONAL { ?spatial_item dcterms:title ?title . }
   }""")
-    espatialancestors = g.query(qt.substitute(resource = identifier))
+    espatialancestors = g.query(qt.substitute(identifier = identifier))
 
 
 
@@ -156,24 +154,23 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
         with nav(cls="navbar navbar-default navbar-fixed-top"):
            with div(cls="container-fluid"):
                with div(cls="navbar-header"):
-                   a("P-LOD Linked Open Data for Pompeii: Identifier", href="/p-lod/id/pompeii",cls="navbar-brand")
+                   a("P-LOD Linked Open Data for Pompeii: Identifier Display and Browse", href="/p-lod/id/pompeii",cls="navbar-brand")
+                   
                    with ul(cls="nav navbar-nav"):
                        with li(cls="dropdown"):
-                           a("Browse", href="#",cls="dropdown-toggle", data_toggle="dropdown")
+                           a("Go to...", href="#",cls="dropdown-toggle", data_toggle="dropdown")
                            with ul(cls="dropdown-menu", role="menu"):
-                               li(a('Go to Pompeii', href="/p-lod/id/pompeii"))
+                               li(a('Pompeii', href="/p-lod/id/pompeii"))
     
         with div(cls="container", about="/p-lod/%s" % (identifier)):
         
             with dl(cls="dl-horizontal"):
                 unescapehtml = False
                 dt()
-                if rdf.URIRef('http://purl.org/dc/terms/title') in eresult_df.index:
-                    c_title = eresult_df.loc[rdf.URIRef('http://purl.org/dc/terms/title'),'o']
-                elif rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in eresult_df.index:
-                    c_title = eresult_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
-                else:
-                    c_title = identifier
+                #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in eresult_df.index:
+                #    c_title = eresult_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
+                #else:
+                c_title = identifier
 
 
                 dd(strong(f"{c_title} [urn:p-lod:id:{identifier}]", cls="large"), style="margin-top:.5em;margin-bottom:.5em")
