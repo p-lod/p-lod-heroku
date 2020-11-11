@@ -63,6 +63,7 @@ def identifiers(identifier):
     #    response.headers['Content-Type'] = 'application/xhtml+xml; charset=utf-8'
     #    return response
     
+    # as subject w/additional info
     qt =  Template("""SELECT ?p ?o ?plabel ?prange ?olabel
            WHERE {
               p-lod:$identifier ?p ?o .
@@ -70,10 +71,26 @@ def identifiers(identifier):
               OPTIONAL { ?o rdfs:label ?olabel }
 
            } ORDER BY ?plabel""")
-    id_result = g.query(qt.substitute(identifier = identifier), initNs = ns)
-    id_result_df = pd.DataFrame(id_result, columns = id_result.json['head']['vars']).set_index('p')
+    id_as_subject = g.query(qt.substitute(identifier = identifier), initNs = ns)
+    id_as_subject_df = pd.DataFrame(id_as_subject, columns = id_as_subject.json['head']['vars']).set_index('p')
         
+    # as object
+    qt = Template("""SELECT ?s ?p 
+           WHERE {
+              ?s  ?p p-lod:$identifier .
+           }  ORDER BY ?s LIMIT 100""")
+    id_as_object = g.query(qt.substitute(identifier = identifier), initNs = ns)
 
+
+    # as predicate
+    qt = Template("""SELECT ?s ?o 
+           WHERE {
+              ?s p-lod:$identifier ?o  .
+           }  ORDER BY ?s LIMIT 100""") 
+    id_as_predicate = g.query(qt.substitute(identifier = identifier), initNs = ns)
+
+
+    # spatial ancestors
     qt = Template("""
 PREFIX plod: <urn:p-lod:id:>
 SELECT ?title ?spatial_item WHERE { 
@@ -82,15 +99,7 @@ SELECT ?title ?spatial_item WHERE {
     id_spatial_ancestors = g.query(qt.substitute(identifier = identifier))
 
 
-
-    qt = Template("""SELECT ?s ?p 
-           WHERE {
-              ?s  ?p p-lod:$identifier .
-           }  ORDER BY ?s LIMIT 100""")
-           
-    id_as_object = g.query(qt.substitute(identifier = identifier), initNs = ns)
-
-
+    # has_art
     qt = Template("""
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX plod: <urn:p-lod:id:>
@@ -138,18 +147,17 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
             with dl(cls="dl-horizontal"):
                 unescapehtml = False
                 dt()
-                #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in id_result_df.index:
-                #    c_title = id_result_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
+                #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in id_as_subject_df.index:
+                #    c_title = id_as_subject_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
                 #else:
                 # c_title = identifier
 
-
                 dd(strong(identifier, cls="large"), style="margin-top:.5em;margin-bottom:.5em")
-                
 
-                for row in id_result:
+                for row in id_as_subject:
                     if str(row.plabel) != 'None':
-                        dt(str(row.plabel))
+                        with dt():
+                          a(str(row.plabel), href = str(row.p).replace('urn:p-lod:id:',''))
                     else:
                         dt(i(str(row.p)))
                 
@@ -183,12 +191,26 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                     lenstr = ''
                     if objlength == 1000:
                         lenstr = '(first 1000)'
-                    dt(f"Used as Object By  {lenstr}")
+                    dt(f"Used as Object By {lenstr}")
                     with dd():
                          for s_p in id_as_object:
                             a(str(s_p.s), href= str(s_p.s).replace('urn:p-lod:id:',''))
                             span(" via ")
                             a(str(s_p.p),href = str(s_p.p).replace('urn:p-lod:id:',''))
+                            br()
+
+            predlength = len(id_as_predicate)
+            if predlength: # objlength > 0:
+                with dl(cls="dl-horizontal"):
+                    lenstr = ''
+                    if predlength == 1000:
+                        lenstr = '(first 1000)'
+                    dt(f"Used as Predicate By {lenstr}")
+                    with dd():
+                         for s_o in id_as_predicate:
+                            a(str(s_o.s), href= str(s_o.s).replace('urn:p-lod:id:',''))
+                            span(" via ")
+                            a(str(s_o.o),href = str(s_o.o).replace('urn:p-lod:id:',''))
                             br()
 
             if len(id_has_art) > 0:
