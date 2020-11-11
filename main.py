@@ -62,39 +62,33 @@ def identifiers(identifier):
     # def add_header(response):
     #    response.headers['Content-Type'] = 'application/xhtml+xml; charset=utf-8'
     #    return response
-         
-    eresult = g.query(
-        """SELECT ?p ?o ?plabel ?prange ?olabel ?sortorder
-           WHERE {
-              p-lod:%s ?p ?o .
-              OPTIONAL { ?p rdfs:label ?plabel }
-              OPTIONAL { ?p rdfs:range ?prange }
-              OPTIONAL { ?p p-lod:sort-order ?sortorder }
-              OPTIONAL { ?o rdfs:label ?olabel }
-           } ORDER BY ?sortorder ?plabel""" % (identifier), initNs = ns)
-    eresult_df = pd.DataFrame(eresult, columns = eresult.json['head']['vars']).set_index('p')
     
-    eparts = g.query(
-        """SELECT ?part ?label ?vfile ?sortorder
+    qt =  Template("""SELECT ?p ?o ?plabel ?prange ?olabel
            WHERE {
-              ?part ?sub_property  p-lod:%s .
-              ?sub_property rdfs:subPropertyOf p-lod:is-part-of .
-              OPTIONAL { ?part dcterms:title ?label . }
-              ?part rdf:type ?type .
-              OPTIONAL { ?part p-lod:visual-documentation-file ?vfile }
-              OPTIONAL { ?part p-lod:sort-order ?sortorder }
-           } ORDER BY ?type ?sortorder ?part""" % (identifier), initNs = ns)
+              p-lod:$identifier ?p ?o .
+              OPTIONAL { ?p rdfs:label ?plabel }
+              OPTIONAL { ?o rdfs:label ?olabel }
+
+           } ORDER BY ?plabel""")
+    id_result = g.query(qt.substitute(identifier = identifier), initNs = ns)
+    id_result_df = pd.DataFrame(id_result, columns = id_result.json['head']['vars']).set_index('p')
         
 
     qt = Template("""
 PREFIX plod: <urn:p-lod:id:>
-PREFIX dcterms: <http://purl.org/dc/terms/>
 SELECT ?title ?spatial_item WHERE { 
   plod:$identifier plod:spatially-within+ ?spatial_item  .
-  OPTIONAL { ?spatial_item dcterms:title ?title . }
   }""")
-    espatialancestors = g.query(qt.substitute(identifier = identifier))
+    id_spatial_ancestors = g.query(qt.substitute(identifier = identifier))
 
+
+
+    qt = Template("""SELECT ?s ?p 
+           WHERE {
+              ?s  ?p p-lod:$identifier .
+           }  ORDER BY ?s LIMIT 100""")
+           
+    id_as_object = g.query(qt.substitute(identifier = identifier), initNs = ns)
 
 
     qt = Template("""
@@ -102,7 +96,7 @@ PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX plod: <urn:p-lod:id:>
 
 SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
-    BIND ( plod:$resource AS ?resource ) 
+    BIND ( plod:$identifier AS ?resource ) 
  
     ?resource ^plod:spatially-within+/^plod:created-on-surface-of/^plod:is-part-of* ?component .
     ?component a plod:artwork-component .
@@ -117,34 +111,11 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
     OPTIONAL { ?component plod:has-color  ?color  . }
 
 } GROUP BY ?depiction ?within ORDER BY DESC(?count) ?depiction ?within LIMIT 30""")
-
-    ehasart = g.query(qt.substitute(resource = identifier, within_resolution = 'space'))
-
+    id_has_art = g.query(qt.substitute(identifier = identifier, within_resolution = 'space'))
 
 
-    esameas = g.query(
-        """SELECT ?url ?label
-           WHERE {
-              ?url owl:sameAs p-lod:%s .
-              ?url rdfs:label ?label .
-           }""" % (identifier), initNs = ns)
-           
-    eobjects = g.query(
-        """SELECT ?s ?p ?slabel ?plabel 
-           WHERE {
-              ?s  ?p p-lod:%s .
-              OPTIONAL { ?s rdfs:label ?rslabel }
-              OPTIONAL { ?p rdfs:label ?rplabel }
-              OPTIONAL { ?s dcterms:title ?dslabel }
-              OPTIONAL { ?p dcterms:title ?dplabel }
+    
 
-              BIND ( COALESCE ( ?rslabel,?dslabel ) AS ?slabel )
-              BIND ( COALESCE ( ?rplabel,?dplabel ) AS ?plabel )
-
-              FILTER ( ?p != p-lod:next )
-              FILTER ( ?p != p-lod:is-part-of )
-              FILTER ( ?p != owl:sameAs )
-           }  ORDER BY ?s LIMIT 100""" % (identifier), initNs = ns)
 
     edoc = dominate.document(title="Linked Open Data for Pompeii: %s" % (identifier))
     plodheader(edoc, identifier)
@@ -167,8 +138,8 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
             with dl(cls="dl-horizontal"):
                 unescapehtml = False
                 dt()
-                #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in eresult_df.index:
-                #    c_title = eresult_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
+                #if rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label') in id_result_df.index:
+                #    c_title = id_result_df.loc[rdf.URIRef('http://www.w3.org/2000/01/rdf-schema#label'),'o']
                 #else:
                 # c_title = identifier
 
@@ -176,7 +147,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                 dd(strong(identifier, cls="large"), style="margin-top:.5em;margin-bottom:.5em")
                 
 
-                for row in eresult:
+                for row in id_result:
                     if str(row.plabel) != 'None':
                         dt(str(row.plabel))
                     else:
@@ -197,16 +168,16 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                         else:
                             span(olabel)  
     
-            if len(espatialancestors) > 0:
+            if len(id_spatial_ancestors) > 0:
                 with dl(cls="dl-horizontal"):
                     dt('Spatial Ancestors', style="")
                     with dd():
-                        for ancestor in espatialancestors:
+                        for ancestor in id_spatial_ancestors:
                             label = str(ancestor.spatial_item)
                             span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')))
                             br()
                  
-            objlength = len(eobjects)
+            objlength = len(id_as_object)
             if objlength: # objlength > 0:
                 with dl(cls="dl-horizontal"):
                     lenstr = ''
@@ -214,21 +185,22 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                         lenstr = '(first 1000)'
                     dt(f"Used as Object By  {lenstr}")
                     with dd():
-                         for s_p in eobjects:
+                         for s_p in id_as_object:
                             a(str(s_p.s), href= str(s_p.s).replace('urn:p-lod:id:',''))
                             span(" via ")
-                            span(str(s_p.p))
+                            a(str(s_p.p),href = str(s_p.p).replace('urn:p-lod:id:',''))
                             br()
 
-            if len(ehasart) > 0:
+            if len(id_has_art) > 0:
                 with dl(cls="dl-horizontal"):
                     dt('Artwork within (first 30)')
 
                     with dd():
-                        for art in ehasart:
+                        for art in id_has_art:
                             label = str(art.depiction)
                             span(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')))
                             br()
+
 
                 
         with footer(cls="footer"):
