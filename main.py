@@ -101,26 +101,21 @@ SELECT ?title ?spatial_item WHERE {
 
     # has_art
     qt = Template("""
-PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX plod: <urn:p-lod:id:>
 
-SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
-    BIND ( plod:$identifier AS ?resource ) 
+SELECT DISTINCT ?depiction WHERE {
  
-    ?resource ^plod:spatially-within+/^plod:created-on-surface-of/^plod:is-part-of* ?component .
+    plod:$identifier ^plod:spatially-within*/^plod:created-on-surface-of*/^plod:is-part-of* ?component .
     ?component a plod:artwork-component .
+    ?component plod:depicts ?depiction .
 
     # when this is part of the PALP interface, this clause can select "smallest 
     # clickable spatial unit" that will be shown to public via its own page
-    ?component plod:is-part-of+/plod:created-on-surface-of/plod:spatially-within* ?within .
-    ?within a plod:$within_resolution .
+    #?component plod:is-part-of+/plod:created-on-surface-of/plod:spatially-within* ?within .
+    #?within a plod:####within_resolution .
 
-    ?component plod:depicts ?depiction .
-    OPTIONAL { ?component plod:has-action ?action . }
-    OPTIONAL { ?component plod:has-color  ?color  . }
-
-} GROUP BY ?depiction ?within ORDER BY DESC(?count) ?depiction ?within LIMIT 30""")
-    id_has_art = g.query(qt.substitute(identifier = identifier, within_resolution = 'space'))
+} ORDER BY ?depiction LIMIT 100""")
+    id_has_art = g.query(qt.substitute(identifier = identifier))
 
 
     
@@ -215,7 +210,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
 
             if len(id_has_art) > 0:
                 with dl(cls="dl-horizontal"):
-                    dt('Artwork within (first 30)')
+                    dt('Artwork within (1st 100)')
 
                     with dd():
                         for art in id_has_art:
