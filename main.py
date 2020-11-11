@@ -209,7 +209,7 @@ SELECT ?depiction ?within (COUNT(?depiction) as ?count) WHERE {
                     with dd():
                          for s_o in id_as_predicate:
                             a(str(s_o.s), href= str(s_o.s).replace('urn:p-lod:id:',''))
-                            span(" via ")
+                            span(" → ")
                             a(str(s_o.o),href = str(s_o.o).replace('urn:p-lod:id:',''))
                             br()
 
