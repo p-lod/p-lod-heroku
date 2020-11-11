@@ -210,7 +210,7 @@ SELECT DISTINCT ?depiction WHERE {
 
             if len(id_has_art) > 0:
                 with dl(cls="dl-horizontal"):
-                    dt('Artwork within (1st 100)')
+                    dt('Depicts concepts (100)')
 
                     with dd():
                         for art in id_has_art:
