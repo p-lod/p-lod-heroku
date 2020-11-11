@@ -92,9 +92,13 @@ def identifiers(identifier):
 
     # spatial ancestors
     qt = Template("""
-PREFIX plod: <urn:p-lod:id:>
-SELECT ?title ?spatial_item WHERE { 
-  plod:$identifier plod:spatially-within+ ?spatial_item  .
+PREFIX p-lod: <urn:p-lod:id:>
+SELECT DISTINCT ?spatial_item WHERE { 
+  { p-lod:$identifier p-lod:is-part-of*/p-lod:created-on-surface-of* ?feature .
+    ?feature p-lod:spatially-within* ?spatial_item .
+    ?feature a p-lod:feature }
+    UNION
+    { p-lod:$identifier p-lod:spatially-within+ ?spatial_item  . }
   }""")
     id_spatial_ancestors = g.query(qt.substitute(identifier = identifier))
 
@@ -171,14 +175,6 @@ SELECT DISTINCT ?depiction WHERE {
                         else:
                             span(olabel)  
     
-            if len(id_spatial_ancestors) > 0:
-                with dl(cls="dl-horizontal"):
-                    dt('Spatial Ancestors', style="")
-                    with dd():
-                        for ancestor in id_spatial_ancestors:
-                            label = str(ancestor.spatial_item)
-                            span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')))
-                            br()
                  
             objlength = len(id_as_object)
             if objlength: # objlength > 0:
@@ -208,6 +204,15 @@ SELECT DISTINCT ?depiction WHERE {
                             a(str(s_o.o),href = str(s_o.o).replace('urn:p-lod:id:',''))
                             br()
 
+            if len(id_spatial_ancestors) > 0:
+                with dl(cls="dl-horizontal"):
+                    dt('Spatial Ancestors', style="")
+                    with dd():
+                        for ancestor in id_spatial_ancestors:
+                            label = str(ancestor.spatial_item)
+                            span(a(label, rel="dcterms:hasPart", href = str(ancestor.spatial_item).replace('urn:p-lod:id:','')))
+                            br()
+
             if len(id_has_art) > 0:
                 with dl(cls="dl-horizontal"):
                     dt('Depicts concepts (100)')
@@ -218,8 +223,6 @@ SELECT DISTINCT ?depiction WHERE {
                             span(a(label, rel="dcterms:hasPart", href = str(art.depiction).replace('urn:p-lod:id:','')))
                             br()
 
-
-                
         with footer(cls="footer"):
             with div(cls="container"):
                 with p(cls="text-muted"):
