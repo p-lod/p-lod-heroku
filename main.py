@@ -240,21 +240,6 @@ SELECT DISTINCT ?depiction WHERE {
         return edoc.render()
 
 
-format_these = ['city','region','insula','property','space','feature','artwork','concept']
-
-def city(identifier):
-  return "city: {identifier}"
-
-def region(identifier):
-  return f"region: {identifier}"
-
-@app.route('/palp/<path:formatted_type>/<path:identifier>')
-def formatted_types(formatted_type,identifier):
-    if formatted_type not in format_these:
-      return("Don't know what to do")
-    else:
-      return globals()[formatted_type](identifier)
-
 
 @app.route('/')
 def index():
