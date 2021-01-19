@@ -35,6 +35,7 @@ ns = {"dcterms" : "http://purl.org/dc/terms/",
 app = Flask(__name__)
 
 
+
 # Connect to the remote triplestore with read-only connection
 store = rdf.plugin.get("SPARQLStore", rdf.store.Store)(endpoint="http://52.170.134.25:3030/plod_endpoint/query",
                                                        context_aware = False,
@@ -237,6 +238,22 @@ SELECT DISTINCT ?depiction WHERE {
         return str(soup)
     else:
         return edoc.render()
+
+
+format_these = ['city','region','insula','property','space','feature','artwork','concept']
+
+def city(identifier):
+  return "city: {identifier}"
+
+def region(identifier):
+  return f"region: {identifier}"
+
+@app.route('/palp/<path:formatted_type>/<path:identifier>')
+def formatted_types(formatted_type,identifier):
+    if formatted_type not in format_these:
+      return("Don't know what to do")
+    else:
+      return globals()[formatted_type](identifier)
 
 
 @app.route('/')
